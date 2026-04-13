@@ -715,6 +715,22 @@ mostrarTarjeta(cliente);
       setLoading(false);
     }
   });
+  function mostrarTarjeta(cliente) {
+  document.body.innerHTML = `
+    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center;">
+      
+      <div style="background:#111; padding:30px; border-radius:15px;">
+        <h2 style="color:#00ff88;">${cliente.nombre}</h2>
+        <p>ID: ${cliente.id}</p>
+
+        <div style="margin-top:20px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${cliente.id}&size=150x150" />
+        </div>
+      </div>
+
+    </div>
+  `;
+}
 </script>
 
 </body>
