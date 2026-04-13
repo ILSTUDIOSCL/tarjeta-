@@ -713,7 +713,15 @@ mostrarTarjeta(cliente);
       setLoading(false);
     }
   });
-  function mostrarLogin() {
+  function mostrarTarjeta(cliente) {
+  const sellos = cliente.sellos || 0;
+  const total = 5;
+
+  let estrellas = "";
+  for (let i = 0; i < total; i++) {
+    estrellas += i < sellos ? "⭐" : "⬜";
+    }
+    
   document.body.innerHTML = `
     <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center;">
       
