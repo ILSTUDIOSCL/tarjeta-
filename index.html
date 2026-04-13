@@ -720,27 +720,30 @@ mostrarTarjeta(cliente);
   let estrellas = "";
   for (let i = 0; i < total; i++) {
     estrellas += i < sellos ? "⭐" : "⬜";
-    }
-    
+  }
+
   document.body.innerHTML = `
-    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center;">
+    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center; font-family:Arial;">
       
-      <div style="background:#111; padding:30px; border-radius:15px; width:320px;">
+      <div style="background:#111; padding:30px; border-radius:15px; width:320px; box-shadow:0 0 20px rgba(0,255,100,0.2);">
         
-        <h2 style="color:#00ff88;">Iniciar sesión</h2>
+        <h2 style="color:#00ff88;">${cliente.nombre}</h2>
 
-        <input id="loginEmail" placeholder="Tu email" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:none;" />
+        <div style="font-size:28px; margin:20px 0;">
+          ${estrellas}
+        </div>
 
-        <button onclick="loginCliente()" style="margin-top:15px; width:100%; padding:12px; background:#00ff88; border:none; border-radius:8px;">
-          Entrar
-        </button>
+        <p>${sellos} / ${total} sellos</p>
 
-        <p id="loginMsg" style="margin-top:10px;"></p>
+        <div style="margin-top:20px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${cliente.id}&size=150x150" />
+        </div>
 
       </div>
 
     </div>
   `;
+}
 }
   async function loginCliente() {
   const email = document.getElementById("loginEmail").value;
