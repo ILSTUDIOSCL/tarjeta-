@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>LoyaltyOS — Tarjeta de Sellos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* ── TOKENS ─────────────────────────────────────── */
+:root {
+  --bg:        #0d0d0f;
+  --surface:   #131419;
+  --surface2:  #1a1c23;
+  --border:    rgba(255,255,255,.07);
+  --green:     #00ff88;
+  --glow:      rgba(0,255,136,.3);
+  --gdim:      rgba(0,255,136,.1);
+  --text:      #e6ecf0;
+  --muted:     #545b68;
+  --error:     #ff4d6d;
+  --edim:      rgba(255,77,109,.12);
+  --r:         14px;
+  --ease:      cubic-bezier(.4,0,.2,1);
+}
+
+/* ── RESET ──────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-x: hidden;
+}
+
+/* ── FONDO AMBIENTAL ────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -5%, rgba(0,255,136,.07) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 90% 90%, rgba(0,255,136,.04) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 26px 26px;
+  pointer-events: none; z-index: 0;
+}
+
+/* ── PANTALLAS ──────────────────────────────────── */
+.screen {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 420px;
+  display: none;
+  animation: fadeUp .45s var(--ease) both;
+}
+.screen.active { display: block; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── MARCA ──────────────────────────────────────── */
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 32px;
+}
+.brand-dot {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--green);
+  display: grid; place-items: center;
+  box-shadow: 0 0 18px var(--glow);
+  flex-shrink: 0;
+}
+.brand-dot svg { width: 16px; height: 16px; }
+.brand-name {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 1.15rem;
+  letter-spacing: -.02em;
+}
+.brand-sub {
+  font-size: .65rem; font-weight: 500;
+  color: var(--green); letter-spacing: .1em;
+  text-transform: uppercase; display: block;
+}
+
+/* ── CARD ───────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 24px 48px rgba(0,0,0,.55);
+}
+
+/* ── TÍTULOS ────────────────────────────────────── */
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700; font-size: 1.35rem;
+  letter-spacing: -.025em; margin-bottom: 6px;
+}
+.card-title span { color: var(--green); text-shadow: 0 0 20px var(--glow); }
+.card-sub {
+  font-size: .82rem; color: var(--muted);
+  font-weight: 300; margin-bottom: 24px;
+}
+
+/* ── CAMPOS ─────────────────────────────────────── */
+.field { margin-bottom: 14px; }
+.field label {
+  display: block; font-size: .72rem; font-weight: 500;
+  color: var(--muted); letter-spacing: .05em;
+  text-transform: uppercase; margin-bottom: 6px;
+  transition: color .2s;
+}
+.field:focus-within label { color: var(--green); }
+
+.input-wrap { position: relative; }
+.input-wrap svg {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 15px; height: 15px;
+  color: var(--muted); pointer-events: none;
+  transition: color .2s;
+}
+.field:focus-within .input-wrap svg { color: var(--green); }
+
+input[type="text"],
+input[type="tel"],
+input[type="email"] {
+  width: 100%;
+  padding: 11px 12px 11px 36px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .88rem;
+  outline: none;
+  -webkit-appearance: none;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+input::placeholder { color: rgba(255,255,255,.17); }
+input:focus {
+  border-color: rgba(0,255,136,.4);
+  background: rgba(0,255,136,.04);
+  box-shadow: 0 0 0 3px rgba(0,255,136,.08);
+}
+input.err {
+  border-color: rgba(255,77,109,.5);
+  box-shadow: 0 0 0 3px rgba(255,77,109,.07);
+}
+
+/* ── BOTONES ────────────────────────────────────── */
+.btn {
+  width: 100%; padding: 12px;
+  border: none; border-radius: 9px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .88rem; font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center;
+  justify-content: center; gap: 7px;
+  transition: transform .2s var(--ease), box-shadow .2s, opacity .2s;
+  position: relative; overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 40%, rgba(255,255,255,.22) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform .5s ease;
+}
+.btn:hover::before { transform: translateX(100%); }
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--green); color: #000; margin-top: 20px;
+}
+.btn-primary:hover:not(:disabled) { box-shadow: 0 0 28px var(--glow); }
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.btn-ghost:hover:not(:disabled) { color: var(--text); border-color: rgba(255,255,255,.15); }
+
+/* ── DIVISOR ────────────────────────────────────── */
+.divider {
+  height: 1px; background: var(--border);
+  margin: 20px 0;
+}
+
+/* ── SPINNER ────────────────────────────────────── */
+.spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(0,0,0,.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin .65s linear infinite;
+  display: none;
+}
+.btn-ghost .spinner { border-color: rgba(255,255,255,.15); border-top-color: var(--text); }
+.loading .spinner { display: block; }
+.loading .btn-label { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── FEEDBACK ───────────────────────────────────── */
+.msg {
+  margin-top: 14px; border-radius: 9px;
+  padding: 11px 13px; font-size: .81rem;
+  display: none; gap: 8px; align-items: flex-start;
+  animation: popIn .25s var(--ease) both;
+}
+.msg.show { display: flex; }
+.msg.ok  { background: var(--gdim); border: 1px solid rgba(0,255,136,.2); color: var(--green); }
+.msg.bad { background: var(--edim); border: 1px solid rgba(255,77,109,.2); color: var(--error); }
+.msg svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── FOOTER ENTRE PANTALLAS ─────────────────────── */
+.switch-link {
+  margin-top: 18px; text-align: center;
+  font-size: .78rem; color: var(--muted);
+}
+.switch-link button {
+  background: none; border: none;
+  color: var(--green); font-family: 'DM Sans', sans-serif;
+  font-size: .78rem; font-weight: 500;
+  cursor: pointer; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.switch-link button:hover { text-decoration: underline; }
+
+/* ── TARJETA CLIENTE ────────────────────────────── */
+.loyalty-card {
+  background: linear-gradient(135deg, #0e1a14 0%, #111820 100%);
+  border: 1px solid rgba(0,255,136,.18);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 0 0 1px rgba(0,255,136,.06), 0 24px 48px rgba(0,0,0,.6);
+}
+
+.lc-header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 20px;
+}
+.lc-brand {
+  font-family: 'Syne', sans-serif;
+  font-size: .78rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--green);
+}
+.lc-chip {
+  font-size: .65rem; font-weight: 500;
+  background: var(--gdim);
+  border: 1px solid rgba(0,255,136,.2);
+  color: var(--green); letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 3px 8px; border-radius: 99px;
+}
+
+.lc-name {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700; font-size: 1.4rem;
+  letter-spacing: -.02em; margin-bottom: 4px;
+}
+.lc-sub { font-size: .75rem; color: var(--muted); margin-bottom: 22px; }
+
+/* ── SELLOS ─────────────────────────────────────── */
+.stamps-row {
+  display: flex; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 12px;
+}
+.stamp {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: grid; place-items: center;
+  font-size: 1.3rem;
+  transition: transform .2s var(--ease);
+}
+.stamp.filled {
+  background: rgba(0,255,136,.12);
+  border: 1.5px solid rgba(0,255,136,.35);
+  box-shadow: 0 0 12px rgba(0,255,136,.12);
+  transform: scale(1);
+}
+.stamp.empty {
+  background: rgba(255,255,255,.03);
+  border: 1.5px dashed rgba(255,255,255,.1);
+}
+
+.stamps-text {
+  font-size: .78rem; color: var(--muted);
+  margin-bottom: 22px;
+}
+.stamps-text strong { color: var(--green); font-weight: 500; }
+
+/* ── QR ─────────────────────────────────────────── */
+.qr-wrap {
+  display: flex; align-items: center; gap: 16px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px;
+}
+.qr-wrap img {
+  width: 80px; height: 80px;
+  border-radius: 8px;
+  filter: invert(1);
+  flex-shrink: 0;
+}
+.qr-info { flex: 1; min-width: 0; }
+.qr-label {
+  font-size: .68rem; color: var(--muted);
+  letter-spacing: .06em; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.qr-id {
+  font-size: .65rem; color: rgba(255,255,255,.3);
+  word-break: break-all; font-style: italic;
+}
+
+/* ── ACCIONES TARJETA ───────────────────────────── */
+.lc-actions {
+  display: flex; gap: 10px; margin-top: 22px;
+}
+.lc-actions .btn { flex: 1; }
+
+/* ── RESPONSIVE ─────────────────────────────────── */
+@media (max-width: 380px) {
+  .card { padding: 22px 16px; }
+  .stamp { width: 36px; height: 36px; font-size: 1.1rem; }
+  .qr-wrap img { width: 68px; height: 68px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA 1: REGISTRO
+════════════════════════════════════════════════════ -->
+<div class="screen active" id="screenRegister">
+
+  <div class="brand">
+    <div class="brand-dot">
+      <svg viewBox="0 0 24 24" fill="#000"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">LoyaltyOS</div>
+      <span class="brand-sub">Fidelización inteligente</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Crea tu <span>tarjeta</span></div>
+    <div class="card-sub">Acumula sellos y canjea premios en tus lugares favoritos.</div>
+
+    <!-- Nombre -->
+    <div class="field">
+      <label for="reg-nombre">Nombre completo</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+        <input type="text" id="reg-nombre" placeholder="Ej. María González" autocomplete="name" />
+      </div>
+    </div>
+
+    <!-- Teléfono -->
+    <div class="field">
+      <label for="reg-telefono">Teléfono</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.6 10.8a15.7 15.7 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.6.6 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.6 3.6 1 1 0 01-.25 1z"/>
+        </svg>
+        <input type="tel" id="reg-telefono" placeholder="+56 9 1234 5678" autocomplete="tel" />
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="field">
+      <label for="reg-email">Correo electrónico</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>
+        </svg>
+        <input type="email" id="reg-email" placeholder="hola@ejemplo.com" autocomplete="email" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="btn btn-primary" id="btn-register">
+      <div class="spinner"></div>
+      <span class="btn-label">Crear mi tarjeta →</span>
+    </button>
+
+    <div class="msg" id="msg-register" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="msg-register-icon"></svg>
+      <span id="msg-register-text"></span>
+    </div>
+  </div>
+
+  <div class="switch-link">
+    ¿Ya tienes cuenta?
+    <button id="btn-goto-login">Iniciar sesión</button>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA 2: LOGIN
+════════════════════════════════════════════════════ -->
+<div class="screen" id="screenLogin">
+
+  <div class="brand">
+    <div class="brand-dot">
+      <svg viewBox="0 0 24 24" fill="#000"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">LoyaltyOS</div>
+      <span class="brand-sub">Fidelización inteligente</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Bienvenido <span>de vuelta</span></div>
+    <div class="card-sub">Ingresa tu correo para ver tu tarjeta de sellos.</div>
+
+    <!-- Email login -->
+    <div class="field">
+      <label for="login-email">Correo electrónico</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>
+        </svg>
+        <input type="email" id="login-email" placeholder="hola@ejemplo.com" autocomplete="email" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="btn btn-primary" id="btn-login">
+      <div class="spinner"></div>
+      <span class="btn-label">Ver mi tarjeta →</span>
+    </button>
+
+    <div class="msg" id="msg-login" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="msg-login-icon"></svg>
+      <span id="msg-login-text"></span>
+    </div>
+  </div>
+
+  <div class="switch-link">
+    ¿No tienes cuenta?
+    <button id="btn-goto-register">Regístrate gratis</button>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA 3: TARJETA DEL CLIENTE
+════════════════════════════════════════════════════ -->
+<div class="screen" id="screenCard">
+
+  <div class="brand">
+    <div class="brand-dot">
+      <svg viewBox="0 0 24 24" fill="#000"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">LoyaltyOS</div>
+      <span class="brand-sub">Tu tarjeta de fidelización</span>
+    </div>
+  </div>
+
+  <div class="loyalty-card">
+    <div class="lc-header">
+      <span class="lc-brand">★ LoyaltyOS</span>
+      <span class="lc-chip">Activa</span>
+    </div>
+
+    <div class="lc-name" id="card-nombre">—</div>
+    <div class="lc-sub" id="card-email">—</div>
+
+    <!-- Sellos dinámicos -->
+    <div class="stamps-row" id="card-stamps"></div>
+    <div class="stamps-text" id="card-stamps-text"></div>
+
+    <!-- QR dinámico -->
+    <div class="qr-wrap">
+      <img id="card-qr" src="" alt="QR de cliente" />
+      <div class="qr-info">
+        <div class="qr-label">Muestra este código en caja</div>
+        <div class="qr-id" id="card-id">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lc-actions">
+    <button class="btn btn-ghost" id="btn-cerrar">← Salir</button>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ── CONFIGURACIÓN ─────────────────────────── */
+  var SUPABASE_URL  = 'https://epesiqslzlwelbcgkqxi.supabase.co';
+  var SUPABASE_KEY  = 'sb_publishable_1VQKC31KHETg9z33Sq-dAQ_EkDQuNJO';
+  var NEGOCIO_ID    = 'b8431f9a-706f-4a13-bd7a-8c256dda127d';
+  var TOTAL_SELLOS  = 10; // cuántos sellos necesita para llenar la tarjeta
+
+  /* ── SUPABASE ──────────────────────────────── */
+  var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  /* ── PANTALLAS ─────────────────────────────── */
+  var screens = {
+    register: document.getElementById('screenRegister'),
+    login:    document.getElementById('screenLogin'),
+    card:     document.getElementById('screenCard')
+  };
+
+  function mostrarPantalla(nombre) {
+    Object.values(screens).forEach(function (s) { s.classList.remove('active'); });
+    // Force reflow para que la animación se reinicie
+    void screens[nombre].offsetWidth;
+    screens[nombre].classList.add('active');
+  }
+
+  /* ── FEEDBACK ──────────────────────────────── */
+  var ICON_OK  = '<circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>';
+  var ICON_ERR = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="currentColor"/>';
+
+  function mostrarMsg(id, tipo, texto) {
+    var el   = document.getElementById('msg-' + id);
+    var icon = document.getElementById('msg-' + id + '-icon');
+    var txt  = document.getElementById('msg-' + id + '-text');
+    el.className  = 'msg show ' + (tipo === 'ok' ? 'ok' : 'bad');
+    icon.innerHTML = tipo === 'ok' ? ICON_OK : ICON_ERR;
+    txt.textContent = texto;
+  }
+
+  function limpiarMsg(id) {
+    var el = document.getElementById('msg-' + id);
+    if (el) el.className = 'msg';
+  }
+
+  /* ── LOADING EN BOTÓN ──────────────────────── */
+  function setLoading(btn, estado) {
+    btn.disabled = estado;
+    btn.classList.toggle('loading', estado);
+  }
+
+  /* ── LIMPIAR ERRORES EN INPUT ──────────────── */
+  function limpiarError(input) {
+    input.classList.remove('err');
+  }
+
+  /* ── VALIDACIÓN ────────────────────────────── */
+  function validarEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  }
+
+  /* ══════════════════════════════════════════
+     PANTALLA 3: MOSTRAR TARJETA
+  ══════════════════════════════════════════ */
+  function mostrarTarjeta(cliente) {
+    var sellos = cliente.sellos || 0;
+
+    // Datos básicos
+    document.getElementById('card-nombre').textContent = cliente.nombre;
+    document.getElementById('card-email').textContent  = cliente.email;
+    document.getElementById('card-id').textContent     = cliente.id;
+
+    // Sellos visuales
+    var stampsRow  = document.getElementById('card-stamps');
+    var stampsText = document.getElementById('card-stamps-text');
+    stampsRow.innerHTML = '';
+
+    for (var i = 0; i < TOTAL_SELLOS; i++) {
+      var div = document.createElement('div');
+      if (i < sellos) {
+        div.className = 'stamp filled';
+        div.textContent = '⭐';
+      } else {
+        div.className = 'stamp empty';
+        div.textContent = '⬜';
+      }
+      stampsRow.appendChild(div);
+    }
+
+    stampsText.innerHTML = '<strong>' + sellos + ' / ' + TOTAL_SELLOS + '</strong> sellos acumulados';
+
+    // QR dinámico
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(cliente.id);
+    document.getElementById('card-qr').src = qrUrl;
+
+    mostrarPantalla('card');
+  }
+
+  /* ══════════════════════════════════════════
+     PANTALLA 2: LOGIN
+  ══════════════════════════════════════════ */
+  function mostrarLogin() {
+    limpiarMsg('login');
+    var inp = document.getElementById('login-email');
+    inp.value = '';
+    limpiarError(inp);
+    mostrarPantalla('login');
+  }
+
+  async function loginCliente() {
+    var btn   = document.getElementById('btn-login');
+    var input = document.getElementById('login-email');
+    var email = input.value.trim().toLowerCase();
+
+    limpiarMsg('login');
+
+    // Validar
+    if (!validarEmail(email)) {
+      input.classList.add('err');
+      mostrarMsg('login', 'err', 'Ingresa un correo electrónico válido.');
+      return;
+    }
+
+    setLoading(btn, true);
+
+    try {
+      var res = await db
+        .from('clientes')
+        .select('*')
+        .eq('email', email)
+        .eq('negocio_id', NEGOCIO_ID)
+        .single();
+
+      if (res.error || !res.data) {
+        mostrarMsg('login', 'err', 'No encontramos una cuenta con ese correo. ¿Te registraste?');
+        return;
+      }
+
+      mostrarTarjeta(res.data);
+
+    } catch (e) {
+      mostrarMsg('login', 'err', 'Error de conexión. Intenta de nuevo.');
+    } finally {
+      setLoading(btn, false);
+    }
+  }
+
+  /* ══════════════════════════════════════════
+     PANTALLA 1: REGISTRO
+  ══════════════════════════════════════════ */
+  async function registrarCliente() {
+    var btn      = document.getElementById('btn-register');
+    var inNombre = document.getElementById('reg-nombre');
+    var inTel    = document.getElementById('reg-telefono');
+    var inEmail  = document.getElementById('reg-email');
+
+    var nombre   = inNombre.value.trim();
+    var telefono = inTel.value.trim();
+    var email    = inEmail.value.trim().toLowerCase();
+
+    limpiarMsg('register');
+    [inNombre, inTel, inEmail].forEach(limpiarError);
+
+    // Validaciones
+    var errores = false;
+    if (nombre.length < 2)        { inNombre.classList.add('err'); errores = true; }
+    if (telefono.replace(/\D/g, '').length < 7) {
+      inTel.classList.add('err'); errores = true;
+    }
+    if (!validarEmail(email))     { inEmail.classList.add('err');  errores = true; }
+
+    if (errores) {
+      mostrarMsg('register', 'err', 'Por favor completa todos los campos correctamente.');
+      return;
+    }
+
+    setLoading(btn, true);
+
+    try {
+      var res = await db
+        .from('clientes')
+        .insert([{
+          nombre:     nombre,
+          telefono:   telefono,
+          email:      email,
+          negocio_id: NEGOCIO_ID,
+          sellos:     0
+        }])
+        .select()
+        .single();
+
+      if (res.error) {
+        var msg = res.error.message || '';
+        if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('already')) {
+          mostrarMsg('register', 'err', 'Este correo ya está registrado. Inicia sesión.');
+        } else {
+          mostrarMsg('register', 'err', 'Error al guardar. Intenta de nuevo.');
+        }
+        return;
+      }
+
+      mostrarTarjeta(res.data);
+
+    } catch (e) {
+      mostrarMsg('register', 'err', 'Error de conexión. Intenta de nuevo.');
+    } finally {
+      setLoading(btn, false);
+    }
+  }
+
+  /* ══════════════════════════════════════════
+     EVENTOS — todos aquí, sin onclick inline
+  ══════════════════════════════════════════ */
+  document.getElementById('btn-register').addEventListener('click', registrarCliente);
+  document.getElementById('btn-login').addEventListener('click', loginCliente);
+
+  document.getElementById('btn-goto-login').addEventListener('click', function () {
+    mostrarLogin();
+  });
+
+  document.getElementById('btn-goto-register').addEventListener('click', function () {
+    limpiarMsg('register');
+    [document.getElementById('reg-nombre'),
+     document.getElementById('reg-telefono'),
+     document.getElementById('reg-email')].forEach(function (i) {
+      i.value = ''; limpiarError(i);
+    });
+    mostrarPantalla('register');
+  });
+
+  document.getElementById('btn-cerrar').addEventListener('click', function () {
+    mostrarPantalla('register');
+  });
+
+  /* ── Enter en inputs del login ────────────── */
+  document.getElementById('login-email').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') loginCliente();
+  });
+
+  /* ── Enter en inputs del registro ─────────── */
+  ['reg-nombre','reg-telefono','reg-email'].forEach(function (id) {
+    document.getElementById(id).addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') registrarCliente();
+    });
+    document.getElementById(id).addEventListener('input', function () {
+      limpiarError(this); limpiarMsg('register');
+    });
+  });
+
+  document.getElementById('login-email').addEventListener('input', function () {
+    limpiarError(this); limpiarMsg('login');
+  });
+
+})();
+</script>
+</body>
+</html>
