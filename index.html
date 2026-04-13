@@ -535,7 +535,7 @@
 
     <!-- Footer del card -->
     <p class="card-footer">
-      ¿Ya tienes cuenta? <a href="#">Inicia sesión</a>
+      ¿Ya tienes cuenta? <a href="#" onclick="mostrarLogin()">Inicia sesión</a>
     </p>
   </div>
 
@@ -715,6 +715,43 @@ mostrarTarjeta(cliente);
       setLoading(false);
     }
   });
+  function mostrarLogin() {
+  document.body.innerHTML = `
+    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center;">
+      
+      <div style="background:#111; padding:30px; border-radius:15px; width:320px;">
+        
+        <h2 style="color:#00ff88;">Iniciar sesión</h2>
+
+        <input id="loginEmail" placeholder="Tu email" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:none;" />
+
+        <button onclick="loginCliente()" style="margin-top:15px; width:100%; padding:12px; background:#00ff88; border:none; border-radius:8px;">
+          Entrar
+        </button>
+
+        <p id="loginMsg" style="margin-top:10px;"></p>
+
+      </div>
+
+    </div>
+  `;
+}
+  async function loginCliente() {
+  const email = document.getElementById("loginEmail").value;
+
+  const { data, error } = await db
+    .from("clientes")
+    .select("*")
+    .eq("email", email)
+    .single();
+
+  if (error || !data) {
+    document.getElementById("loginMsg").innerText = "❌ No encontrado";
+    return;
+  }
+
+  mostrarTarjeta(data);
+}
   function mostrarTarjeta(cliente) {
   document.body.innerHTML = `
     <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center;">
