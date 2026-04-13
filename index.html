@@ -681,17 +681,21 @@
 
     try {
       // Insertar en la tabla "clientes" de Supabase
-      const { error } = await db
-        .from('clientes')
-        .insert([{
-          nombre:     inputs.nombre.value.trim(),
-          telefono:   inputs.telefono.value.trim(),
-          email:      inputs.email.value.trim().toLowerCase(),
-          negocio_id: NEGOCIO_ID,
-        }]);
+      const { data, error } = await db
+  .from('clientes')
+  .insert([{
+    nombre: inputs.nombre.value.trim(),
+    telefono: inputs.telefono.value.trim(),
+    email: inputs.email.value.trim().toLowerCase(),
+    negocio_id: NEGOCIO_ID,
+  }])
+  .select();
 
       if (error) throw error;
 
+const cliente = data[0];
+mostrarTarjeta(cliente);
+      
       // ¡Éxito!
       showFeedback('success', '¡Cuenta creada! Bienvenido/a al programa de fidelización 🎉');
       form.reset();
