@@ -697,8 +697,6 @@ const cliente = data[0];
 mostrarTarjeta(cliente);
       
       // ¡Éxito!
-      showFeedback('success', '¡Cuenta creada! Bienvenido/a al programa de fidelización 🎉');
-      form.reset();
 
     } catch (err) {
       console.error('Supabase error:', err);
@@ -758,7 +756,7 @@ mostrarTarjeta(cliente);
       
       <div style="background:#111; padding:30px; border-radius:15px;">
         <h2 style="color:#00ff88;">${cliente.nombre}</h2>
-        <p>ID: ${cliente.id}</p>
+        <p>Cliente registrado</p>
 
         <div style="margin-top:20px;">
           <img src="https://api.qrserver.com/v1/create-qr-code/?data=${cliente.id}&size=150x150" />
