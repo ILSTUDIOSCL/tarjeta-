@@ -572,176 +572,126 @@
      JAVASCRIPT: Supabase + Validación + UX
 ════════════════════════════════════════════════ -->
 <script>
-  /* ──────────────────────────────────────────────
-     1. INICIALIZAR SUPABASE
-  ────────────────────────────────────────────── */
-  const SUPABASE_URL    = 'https://epesiqslzlwelbcgkqxi.supabase.co';
-  const SUPABASE_ANON   = 'sb_publishable_1VQKC31KHETg9z33Sq-dAQ_EkDQuNJO';
-  const NEGOCIO_ID      = 'b8431f9a-706f-4a13-bd7a-8c256dda127d'; // UUID de ejemplo
+ <script>
+const SUPABASE_URL = 'https://epesiqslzlwelbcgkqxi.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_1VQKC31KHETg9z33Sq-dAQ_EkDQuNJO';
+const NEGOCIO_ID = 'b8431f9a-706f-4a13-bd7a-8c256dda127d';
 
-  const { createClient } = supabase;
-  const db = createClient(SUPABASE_URL, SUPABASE_ANON);
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  /* ──────────────────────────────────────────────
-     2. REFERENCIAS AL DOM
-  ────────────────────────────────────────────── */
-  const form       = document.getElementById('registerForm');
-  const submitBtn  = document.getElementById('submitBtn');
-  const feedback   = document.getElementById('feedback');
-  const feedbackMsg  = document.getElementById('feedbackMsg');
-  const feedbackIcon = document.getElementById('feedbackIcon');
+// DOM
+const form = document.getElementById('registerForm');
+const submitBtn = document.getElementById('submitBtn');
+const feedback = document.getElementById('feedback');
+const feedbackMsg = document.getElementById('feedbackMsg');
+const feedbackIcon = document.getElementById('feedbackIcon');
 
-  const inputs = {
-    nombre:   document.getElementById('nombre'),
-    telefono: document.getElementById('telefono'),
-    email:    document.getElementById('email'),
-  };
+const inputs = {
+  nombre: document.getElementById('nombre'),
+  telefono: document.getElementById('telefono'),
+  email: document.getElementById('email'),
+};
 
-  /* ──────────────────────────────────────────────
-     3. HELPERS DE UI
-  ────────────────────────────────────────────── */
-
-  /** Muestra u oculta el estado de carga */
-  function setLoading(state) {
-    submitBtn.disabled = state;
-    submitBtn.classList.toggle('is-loading', state);
-  }
-
-  /** Muestra un mensaje de feedback */
-  function showFeedback(type, message) {
-    feedback.className = `feedback show ${type}`;
-    feedbackMsg.textContent = message;
-
-    // Íconos SVG según tipo
-    const icons = {
-      success: '<circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>',
-      error:   '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
-    };
-    feedbackIcon.innerHTML = icons[type] || '';
-  }
-
-  /** Limpia los estados de error en los inputs */
-  function clearErrors() {
-    Object.values(inputs).forEach(el => el.classList.remove('is-error'));
-    feedback.className = 'feedback';
-  }
-
-  /* ──────────────────────────────────────────────
-     4. VALIDACIÓN
-  ────────────────────────────────────────────── */
-  function validate() {
-    let ok = true;
-
-    // Nombre: obligatorio y mínimo 2 chars
-    if (inputs.nombre.value.trim().length < 2) {
-      inputs.nombre.classList.add('is-error');
-      ok = false;
-    }
-
-    // Teléfono: solo dígitos, +, espacios, guiones, mínimo 7 chars
-    const telClean = inputs.telefono.value.trim();
-    if (!/^[+\d\s\-()]{7,}$/.test(telClean)) {
-      inputs.telefono.classList.add('is-error');
-      ok = false;
-    }
-
-    // Email: formato básico
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRe.test(inputs.email.value.trim())) {
-      inputs.email.classList.add('is-error');
-      ok = false;
-    }
-
-    return ok;
-  }
-
-  /* ──────────────────────────────────────────────
-     5. LIMPIAR ERRORES al tipear
-  ────────────────────────────────────────────── */
-  Object.values(inputs).forEach(input => {
-    input.addEventListener('input', () => {
-      input.classList.remove('is-error');
-    });
-  });
-
-  /* ──────────────────────────────────────────────
-     6. ENVÍO DEL FORMULARIO
-  ────────────────────────────────────────────── */
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    clearErrors();
-
-    // Validar antes de enviar
-    if (!validate()) {
-      showFeedback('error', 'Por favor completa todos los campos correctamente.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Insertar en la tabla "clientes" de Supabase
-      const { data, error } = await db
-  .from('clientes')
-  .insert([{
-    nombre: inputs.nombre.value.trim(),
-    telefono: inputs.telefono.value.trim(),
-    email: inputs.email.value.trim().toLowerCase(),
-    negocio_id: NEGOCIO_ID,
-  }])
-  .select();
-
-      if (error) throw error;
-
-const cliente = data[0];
-mostrarTarjeta(cliente);
-      
-      // ¡Éxito!
-
-    } catch (err) {
-      console.error('Supabase error:', err);
-
-      // Error de email duplicado
-      const msg = err?.message || '';
-      if (msg.includes('duplicate') || msg.includes('unique')) {
-        showFeedback('error', 'Este correo ya está registrado. Prueba con otro.');
-      } else {
-        showFeedback('error', 'Ocurrió un error al registrarse. Intenta de nuevo.');
-      }
-
-    } finally {
-      setLoading(false);
-    }
-  });
-
-  } finally {
-  setLoading(false);
+// UI
+function setLoading(state) {
+  submitBtn.disabled = state;
+  submitBtn.classList.toggle('is-loading', state);
 }
+
+function showFeedback(type, message) {
+  feedback.className = `feedback show ${type}`;
+  feedbackMsg.textContent = message;
+}
+
+function clearErrors() {
+  Object.values(inputs).forEach(el => el.classList.remove('is-error'));
+  feedback.className = 'feedback';
+}
+
+// VALIDACIÓN
+function validate() {
+  let ok = true;
+
+  if (inputs.nombre.value.trim().length < 2) {
+    inputs.nombre.classList.add('is-error');
+    ok = false;
+  }
+
+  if (!/^[+\d\s\-()]{7,}$/.test(inputs.telefono.value.trim())) {
+    inputs.telefono.classList.add('is-error');
+    ok = false;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.email.value.trim())) {
+    inputs.email.classList.add('is-error');
+    ok = false;
+  }
+
+  return ok;
+}
+
+// REGISTER
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearErrors();
+
+  if (!validate()) {
+    showFeedback('error', 'Completa los campos correctamente');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const { data, error } = await db
+      .from('clientes')
+      .insert([{
+        nombre: inputs.nombre.value.trim(),
+        telefono: inputs.telefono.value.trim(),
+        email: inputs.email.value.trim().toLowerCase(),
+        negocio_id: NEGOCIO_ID,
+      }])
+      .select();
+
+    if (error) throw error;
+
+    mostrarTarjeta(data[0]);
+
+  } catch (err) {
+    showFeedback('error', 'Error al registrar');
+  } finally {
+    setLoading(false);
+  }
 });
 
-// 👇 AQUÍ EMPIEZAN TUS FUNCIONES
+// LOGIN CLICK
+document.getElementById("btnLoginLink").addEventListener("click", (e) => {
+  e.preventDefault();
+  mostrarLogin();
+});
 
+// LOGIN UI
 function mostrarLogin() {
   document.body.innerHTML = `
-    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center;">
-      
-      <div style="background:#111; padding:30px; border-radius:15px; width:320px;">
-        
+    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white;">
+      <div style="background:#111; padding:30px; border-radius:15px; width:320px; text-align:center;">
         <h2 style="color:#00ff88;">Iniciar sesión</h2>
-
         <input id="loginEmail" placeholder="Tu email" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:none;" />
-
-        <button onclick="loginCliente()" style="margin-top:15px; width:100%; padding:12px; background:#00ff88; border:none; border-radius:8px;">
+        <button id="btnLogin" style="margin-top:15px; width:100%; padding:12px; background:#00ff88; border:none; border-radius:8px;">
           Entrar
         </button>
-
         <p id="loginMsg"></p>
-
       </div>
     </div>
   `;
+
+  setTimeout(() => {
+    document.getElementById("btnLogin").onclick = loginCliente;
+  }, 100);
 }
 
+// LOGIN FUNCIONAL
 async function loginCliente() {
   const email = document.getElementById("loginEmail").value;
 
@@ -759,6 +709,7 @@ async function loginCliente() {
   mostrarTarjeta(data);
 }
 
+// TARJETA
 function mostrarTarjeta(cliente) {
   const sellos = cliente.sellos || 0;
   const total = 5;
@@ -769,60 +720,17 @@ function mostrarTarjeta(cliente) {
   }
 
   document.body.innerHTML = `
-    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center;">
-      
-      <div style="background:#111; padding:30px; border-radius:15px; width:320px;">
-        
+    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white;">
+      <div style="background:#111; padding:30px; border-radius:15px; width:320px; text-align:center;">
         <h2 style="color:#00ff88;">${cliente.nombre}</h2>
-
-        <div style="font-size:28px; margin:20px 0;">
-          ${estrellas}
-        </div>
-
+        <div style="font-size:28px; margin:20px 0;">${estrellas}</div>
         <p>${sellos} / ${total} sellos</p>
-
-        <div style="margin-top:20px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${cliente.id}&size=150x150" />
-        </div>
-
+        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${cliente.id}&size=150x150" />
       </div>
-
     </div>
   `;
 }
-  
-  async function loginCliente() {
-  const email = document.getElementById("loginEmail").value;
 
-  const { data, error } = await db
-    .from("clientes")
-    .select("*")
-    .eq("email", email)
-    .single();
-
-  if (error || !data) {
-    document.getElementById("loginMsg").innerText = "❌ No encontrado";
-    return;
-  }
-
-  mostrarTarjeta(data);
-}
-  function mostrarTarjeta(cliente) {
-  document.body.innerHTML = `
-    <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#0d0d0d; color:white; text-align:center;">
-      
-      <div style="background:#111; padding:30px; border-radius:15px;">
-        <h2 style="color:#00ff88;">${cliente.nombre}</h2>
-        <p>Cliente registrado</p>
-
-        <div style="margin-top:20px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${cliente.id}&size=150x150" />
-        </div>
-      </div>
-
-    </div>
-  `;
-}
 </script>
 
 </body>
